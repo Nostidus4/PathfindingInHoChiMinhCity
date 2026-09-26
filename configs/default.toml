@@ -1,0 +1,41 @@
+# Tham số mô phỏng mặc định. Được đọc bởi src/config.py (SimConfig).
+# Đơn vị: thời gian = giây kể từ 00:00, tốc độ = km/h, mật độ = veh/km, lưu lượng = veh/h.
+
+seed = 42
+
+[simulation]
+# Cửa sổ mô phỏng trong ngày (HH:MM) và bước lưới thời gian (giây, 900 = 15 phút)
+window_start = "05:00"
+window_end = "23:00"
+grid_step_s = 900
+
+[greenshields]
+# v = v_free * (1 - k / k_jam); capacity = v_free * k_jam / 4
+k_jam_veh_km = 150.0     # mật độ kẹt xe
+min_speed_kmh = 5.0      # chặn dưới để thời gian đi không vô hạn
+
+[greenshields.free_flow_kmh]
+# Tốc độ tự do theo loại đường (OSM highway tag)
+primary = 50.0
+secondary = 40.0
+tertiary = 35.0
+residential = 25.0
+default = 30.0
+
+[peaks]
+# Đỉnh giờ cao điểm: tâm (HH:MM), độ rộng (phút), mức tăng mật độ (0..1)
+morning = { center = "07:30", width_min = 90, amplitude = 0.7 }
+evening = { center = "17:30", width_min = 120, amplitude = 0.8 }
+base_density_ratio = 0.2   # k / k_jam lúc thấp điểm
+
+[district_factor]
+# Hệ số nhân mật độ theo quận (5 quận cũ)
+"Quan 1" = 1.3
+"Quan 3" = 1.2
+"Quan 5" = 1.15
+"Phu Nhuan" = 1.1
+"Binh Thanh" = 1.0
+
+[heuristic]
+default_mode = "dynamic_ub"      # zero | static_vmax | dynamic_ub | dynamic_weighted
+weight_w = 1.5                   # trọng số w cho dynamic_weighted (w > 1 => không admissible)

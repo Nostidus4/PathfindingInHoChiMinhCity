@@ -1,0 +1,59 @@
+[project]
+name = "hcmc-pathfinding"
+version = "0.1.0"
+description = "Time-Dependent Traffic-Aware A* cho TOPIC 2: Pathfinding in Ho Chi Minh City"
+readme = "README.md"
+authors = [
+    { name = "Nostidus4", email = "xaongoctan@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "folium>=0.20.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+]
+
+[project.scripts]
+hcmc = "src.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+data = [
+    "geopandas>=1.1.4",
+    "osmnx>=2.1.1",
+    "shapely>=2.1.2",
+]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.9",
+]
+ui = [
+    "streamlit>=1.64.0",
+    "streamlit-folium>=0.27.4",
+]
+
+[tool.uv]
+# Mặc định chỉ cài group dev. P1, P2 chạy thêm: uv sync --group data ; P6: uv sync --group ui
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["data", "outputs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.uv.build-backend]
+# Package chính là thư mục src/ (không có lớp src/hcmc_pathfinding/). Import: from src.models import ...
+module-name = "src"
+module-root = ""

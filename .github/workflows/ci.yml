@@ -1,0 +1,23 @@
+# CI: mỗi PR / push lên main phải qua ruff + pytest (quy tắc "main luôn xanh").
+# Chỉ cài group dev (mặc định) -> không cần osmnx/geopandas/streamlit.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Cài Python + dependencies
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check
+      - name: Test
+        run: uv run pytest --cov=src --cov-report=term-missing
