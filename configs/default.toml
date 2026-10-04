@@ -8,6 +8,9 @@ seed = 42
 window_start = "05:00"
 window_end = "23:00"
 grid_step_s = 900
+# Nhiễu cố định theo từng edge: rho nhân hệ số trong [1 - edge_noise, 1 + edge_noise],
+# sinh từ (seed, edge_id) nên cùng seed -> cùng kết quả. 0 = tắt nhiễu.
+edge_noise = 0.1
 
 [greenshields]
 # v = v_free * (1 - k / k_jam); capacity = v_free * k_jam / 4
@@ -23,13 +26,23 @@ residential = 25.0
 default = 30.0
 
 [peaks]
-# Đỉnh giờ cao điểm: tâm (HH:MM), độ rộng (phút), mức tăng mật độ (0..1)
+# Đỉnh giờ cao điểm dạng Gaussian: tâm (HH:MM), độ rộng (phút), mức tăng mật độ (0..1).
+# width_min là độ dài khoảng [tâm - sigma, tâm + sigma], tức sigma = width_min / 2.
 morning = { center = "07:30", width_min = 90, amplitude = 0.7 }
+midday = { center = "12:00", width_min = 240, amplitude = 0.25 }
 evening = { center = "17:30", width_min = 120, amplitude = 0.8 }
 base_density_ratio = 0.2   # k / k_jam lúc thấp điểm
 
+[road_type_factor]
+# Hệ số nhân mật độ theo loại đường (OSM highway tag), fallback về 'default'
+primary = 1.2
+secondary = 1.1
+tertiary = 1.0
+residential = 0.8
+default = 1.0
+
 [district_factor]
-# Hệ số nhân mật độ theo quận (5 quận cũ)
+# Hệ số nhân mật độ theo quận (5 quận cũ), quận không có trong bảng dùng 1.0
 "Quan 1" = 1.3
 "Quan 3" = 1.2
 "Quan 5" = 1.15
