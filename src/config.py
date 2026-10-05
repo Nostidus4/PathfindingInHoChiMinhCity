@@ -1,7 +1,7 @@
 """SimConfig: đọc tham số mô phỏng từ configs/default.toml.
 
-Chứa: cửa sổ mô phỏng, tham số Greenshields, đỉnh giờ cao điểm, hệ số quận,
-trọng số w của dynamic_weighted, seed. Mọi module lấy tham số từ đây,
+Chứa: cửa sổ mô phỏng, tham số Greenshields, đỉnh giờ cao điểm, hệ số loại đường,
+hệ số quận, nhiễu theo edge, trọng số w của dynamic_weighted, seed. Mọi module lấy tham số từ đây,
 KHÔNG hard-code số trong code.
 """
 
@@ -35,13 +35,23 @@ class SimConfig:
     free_flow_kmh: dict[str, float] = field(default_factory=lambda: {"default": 30.0})
     peaks: dict[str, PeakConfig] = field(default_factory=dict)
     base_density_ratio: float = 0.2
+    road_type_factor: dict[str, float] = field(default_factory=lambda: {"default": 1.0})
     district_factor: dict[str, float] = field(default_factory=dict)
+    edge_noise: float = 0.0
     default_heuristic: str = "dynamic_ub"
     weight_w: float = 1.5
 
     def free_flow_for(self, road_type: str) -> float:
         """Tốc độ tự do (km/h) theo loại đường, fallback về 'default'."""
         return self.free_flow_kmh.get(road_type, self.free_flow_kmh.get("default", 30.0))
+
+    def road_type_factor_for(self, road_type: str) -> float:
+        """Hệ số nhân mật độ theo loại đường, fallback về 'default' (hoặc 1.0)."""
+        return self.road_type_factor.get(road_type, self.road_type_factor.get("default", 1.0))
+
+    def district_factor_for(self, district: str) -> float:
+        """Hệ số nhân mật độ theo quận, quận không có trong bảng dùng 1.0."""
+        return self.district_factor.get(district, 1.0)
 
     @property
     def v_max_kmh(self) -> float:
@@ -77,7 +87,10 @@ class SimConfig:
             or {"default": 30.0},
             peaks=peaks,
             base_density_ratio=float(base_ratio),
+            road_type_factor={k: float(v) for k, v in raw.get("road_type_factor", {}).items()}
+            or {"default": 1.0},
             district_factor={k: float(v) for k, v in raw.get("district_factor", {}).items()},
+            edge_noise=float(sim.get("edge_noise", 0.0)),
             default_heuristic=heu.get("default_mode", "dynamic_ub"),
             weight_w=float(heu.get("weight_w", 1.5)),
         )
