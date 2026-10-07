@@ -1,0 +1,22 @@
+test_admissibility_all_modes (test_wp5.WP5Tests.test_admissibility_all_modes) ... ok
+test_all_pairs_all_97_times (test_wp5.WP5Tests.test_all_pairs_all_97_times) ... ok
+test_cli_time (test_wp5.WP5Tests.test_cli_time) ... ok
+test_consistency_all_modes (test_wp5.WP5Tests.test_consistency_all_modes) ... ok
+test_cost_called_at_arrival (test_wp5.WP5Tests.test_cost_called_at_arrival) ... ok
+test_departure_changes_cost_and_heuristic (test_wp5.WP5Tests.test_departure_changes_cost_and_heuristic) ... ok
+test_fifo_dense_grid_and_clamp (test_wp5.WP5Tests.test_fifo_dense_grid_and_clamp) ... ok
+test_fifo_detects_drop (test_wp5.WP5Tests.test_fifo_detects_drop) ... ok
+test_heap_ties_parallel_edges_and_stale_entries (test_wp5.WP5Tests.test_heap_ties_parallel_edges_and_stale_entries) ... ok
+test_invalid_inputs (test_wp5.WP5Tests.test_invalid_inputs) ... ok
+test_no_path (test_wp5.WP5Tests.test_no_path) ... ok
+test_random_fifo_graphs_against_independent_oracle (test_wp5.WP5Tests.test_random_fifo_graphs_against_independent_oracle) ... ok
+test_reopening_with_admissible_inconsistent_h (test_wp5.WP5Tests.test_reopening_with_admissible_inconsistent_h) ... ok
+test_start_equals_goal (test_wp5.WP5Tests.test_start_equals_goal) ... ok
+test_trace_and_distance (test_wp5.WP5Tests.test_trace_and_distance) ... ok
+test_weighted_counterexample (test_wp5.WP5Tests.test_weighted_counterexample) ... ok
+test_zero_cost_cycle (test_wp5.WP5Tests.test_zero_cost_cycle) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.255s
+
+OK
