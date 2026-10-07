@@ -1,0 +1,26 @@
+# Python / uv
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Dữ liệu thô tải từ OSM (cache, nặng) -> không commit
+data/raw/*
+!data/raw/.gitkeep
+
+# Output sinh ra (bản đồ, bảng, hình) -> không commit
+outputs/*
+!outputs/.gitkeep
+
+# Streamlit / IDE / OS
+.streamlit/secrets.toml
+.vscode/
+.idea/
+.DS_Store
