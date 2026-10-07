@@ -19,7 +19,8 @@ def parse_time(value):
             raise ValueError()
         return hour*3600 + minute*60 + second
     except ValueError:
-        raise argparse.ArgumentTypeError('Time must be HH:MM or HH:MM:SS') from None
+        # Fail with ValueError so callers and tests can assert this specific error type
+        raise ValueError('Time must be HH:MM or HH:MM:SS') from None
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

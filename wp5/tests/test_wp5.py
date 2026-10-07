@@ -118,7 +118,7 @@ class WP5Tests(unittest.TestCase):
     def test_cli_time(self):
         self.assertEqual(parse_time('08:30:15'),30615)
         self.assertEqual(parse_time('08:00'),28800)
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             parse_time('25:00')
 
 if __name__=='__main__':
