@@ -1,6 +1,8 @@
 """Public result objects. All times are seconds; distances are metres."""
-from dataclasses import dataclass, field, asdict
-from typing import Any, Hashable
+from dataclasses import asdict, dataclass, field
+from typing import Any
+from collections.abc import Hashable
+
 
 @dataclass
 class RouteResult:

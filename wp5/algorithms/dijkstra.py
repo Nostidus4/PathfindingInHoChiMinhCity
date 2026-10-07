@@ -3,6 +3,7 @@ import heapq
 import itertools
 import math
 from time import perf_counter
+
 from .contracts import check_query, checked_edge, nonnegative
 from .result import RouteResult
 
@@ -34,7 +35,8 @@ def dijkstra(graph, start, goal, departure_time, edge_cost):
                                perf_counter() - began, None, [e.id for e in edges])
         for edge in graph.get_neighbors(u):
             checked_edge(graph, edge, u)
-            cost = nonnegative(edge_cost(edge, departure_time + g), 'edge_cost', allow_infinity=True)
+            cost = nonnegative(
+                edge_cost(edge, departure_time + g), 'edge_cost', allow_infinity=True)
             if math.isinf(cost):
                 continue
             new_g = g + cost

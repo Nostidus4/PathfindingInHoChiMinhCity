@@ -2,9 +2,11 @@
 import argparse
 import json
 from pathlib import Path
-from algorithms import astar, dijkstra
-from examples.mock_data import build_mock, MODES
-from validation import check_fifo, check_admissibility, check_consistency, compare_routes
+
+from .algorithms import astar, dijkstra
+from .examples.mock_data import MODES, build_mock
+
+from .validation import check_admissibility, check_consistency, check_fifo, compare_routes
 
 def parse_time(value):
     try:
@@ -17,7 +19,7 @@ def parse_time(value):
             raise ValueError()
         return hour*3600 + minute*60 + second
     except ValueError:
-        raise argparse.ArgumentTypeError('Time must be HH:MM or HH:MM:SS')
+        raise argparse.ArgumentTypeError('Time must be HH:MM or HH:MM:SS') from None
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

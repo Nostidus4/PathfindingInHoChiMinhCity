@@ -1,5 +1,7 @@
 """Structural interfaces: existing WP2/WP4 classes need no inheritance."""
-from typing import Protocol, Hashable, Iterable, Collection, Callable
+from typing import Protocol
+from collections.abc import Hashable, Iterable, Collection, Callable
+
 import math
 
 class RoadSegment(Protocol):
@@ -18,7 +20,8 @@ Heuristic = Callable[[Hashable, Hashable, float, str], float]
 def nonnegative(value, name, *, allow_infinity=False):
     value = float(value)
     if math.isnan(value) or value < 0 or (not allow_infinity and not math.isfinite(value)):
-        raise ValueError(f'{name} must be nonnegative and ' + ('not NaN' if allow_infinity else 'finite'))
+        suffix = 'not NaN' if allow_infinity else 'finite'
+        raise ValueError(f'{name} must be nonnegative and {suffix}')
     return value
 
 def check_query(graph, start, goal, departure_time):

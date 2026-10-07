@@ -9,6 +9,7 @@ import itertools
 import math
 from dataclasses import dataclass
 from time import perf_counter
+
 from .contracts import check_query, checked_edge, nonnegative
 from .result import RouteResult
 
@@ -67,7 +68,7 @@ def astar(graph, start, goal, departure_time, edge_cost, heuristic,
             for edge in graph.get_neighbors(current.node):
                 checked_edge(graph, edge, current.node)
                 cost = nonnegative(edge_cost(edge, time), 'edge_cost', allow_infinity=True)
-                if cost == float('inf'):
+                if math.isinf(cost):
                     continue
                 candidate = current.g + cost
                 if not math.isfinite(candidate):
