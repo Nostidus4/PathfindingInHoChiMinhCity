@@ -44,8 +44,22 @@ Pathfinder(graph, provider, cfg).route(start, goal, departure_time, heuristic_mo
 
 ## 2. Time-dependent Dijkstra (ground truth)
 
-Dijkstra chính là A\* với $h = 0$ (`search/dijkstra.py`). Có thêm hàm `true_cost(graph, n, goal, t)` trả về
-$h^*(n, t)$, dùng để kiểm admissibility.
+Về lý thuyết Dijkstra chính là A\* với $h = 0$, nhưng `search/dijkstra.py` được cài **độc lập**, không gọi
+`astar()`. Lý do: `validation/` dùng Dijkstra làm đáp án để kiểm A\*. Nếu oracle gọi lại chính engine đang
+được kiểm thì một lỗi trong `astar` sẽ xuất hiện ở cả hai bên và test vẫn xanh. Hai cài đặt tách rời biến
+`check_admissibility` / `find_counterexamples` thành phép **kiểm chéo** thật sự; việc hai bên cho cùng kết quả
+được khẳng định bằng `tests/test_astar.py::test_zero_mode_matches_independent_dijkstra` (36 cặp x 3 mốc giờ).
+
+Module cung cấp ba hàm:
+
+| Hàm | Dùng để |
+| --- | --- |
+| `dijkstra(graph, start, goal, t, edge_cost)` | Đường tối ưu một cặp, dừng sớm khi settle goal |
+| `earliest_arrival_times(graph, source, t, edge_cost)` | Một lần quét -> chi phí tối ưu tới **mọi** node |
+| `true_cost(graph, n, goal, t, edge_cost)` | $h^*(n, t)$ để kiểm admissibility; `inf` nếu không có đường |
+
+`check_admissibility` dùng `earliest_arrival_times`, nên chỉ cần $|nodes| \times |times|$ lần Dijkstra thay vì
+$|nodes| \times |goals| \times |times|$.
 
 ## 3. Trace mode (D8)
 
@@ -80,28 +94,83 @@ Graph trong `src/mocks.py` có tốc độ hằng 36 km/h, tức 10 m/s, nên co
 
 Đáp án biết trước: **A → C → B → D → F**, dài 1800 m, mất 180 s.
 
-Bảng dưới đây là trace **mong đợi** với `zero` (Dijkstra), xuất phát 08:00 (28800 s):
+Dưới đây là output thật của `format_trace()` với `MockTrafficProvider` (tốc độ hằng 10 m/s), xuất phát
+08:00. Sinh lại bằng:
 
-| Bước | Expand | g (s) | Cập nhật hàng xóm (g mới) | Open sau bước |
-| --- | --- | --- | --- | --- |
-| 1 | A | 0 | B=100, C=40 | C(40), B(100) |
-| 2 | C | 40 | B=70 (tốt hơn 100), D=160, E=140 | B(70), E(140), D(160) |
-| 3 | B | 70 | D=120 (tốt hơn 160), E=160 (không tốt hơn) | D(120), E(140) |
-| 4 | D | 120 | F=180 | E(140), F(180) |
-| 5 | E | 140 | F=210 (không tốt hơn) | F(180) |
-| 6 | F | 180 | Tới đích | |
+```bash
+uv run hcmc route --mock --start A --goal F --time 08:00 --heuristic zero --trace
+```
 
-Với `dynamic_ub` trên mock này, $V_{ub} = 10$ m/s nên $h(n) = d_{geo}(n, F) / 10$. Ta có
-$h(C) \approx 88.6$, $h(B) \approx 66.3$, $h(D) \approx 49.2$, $h(E) \approx 29.5$ (giây).
+```text
+ #  action  node  g (s)  h (s)  f (s)         t  open  note
+--  ------  ----  -----  -----  -----  --------  ----  ---------------------------
+ 0  expand  A       0.0    0.0    0.0  08:00:00     0
+ 1  push    B     100.0    0.0  100.0  08:01:40     1
+ 2  push    C      40.0    0.0   40.0  08:00:40     2
+ 3  expand  C      40.0    0.0   40.0  08:00:40     1
+ 4  update  B      70.0    0.0   70.0  08:01:10     2
+ 5  push    D     160.0    0.0  160.0  08:02:40     3
+ 6  push    E     140.0    0.0  140.0  08:02:20     4
+ 7  expand  B      70.0    0.0   70.0  08:01:10     3
+ 8  update  D     120.0    0.0  120.0  08:02:00     4
+ 9  skip    B     100.0    0.0  100.0  08:01:40     3  nhãn cũ, đã có nhãn tốt hơn
+10  expand  D     120.0    0.0  120.0  08:02:00     2
+11  push    F     180.0    0.0  180.0  08:03:00     3
+12  expand  E     140.0    0.0  140.0  08:02:20     2
+13  skip    D     160.0    0.0  160.0  08:02:40     1  nhãn cũ, đã có nhãn tốt hơn
+14  expand  F     180.0    0.0  180.0  08:03:00     0
 
-- Thứ tự expand là A (f ≈ 109) → C (f ≈ 128.6) → B (f ≈ 136.3) → D (f ≈ 169.2) → E (f ≈ 169.5) → F (f = 180).
-- A\* vẫn tìm đúng đường tối ưu, **nhưng vẫn phải expand E**, vì $f(E) \approx 169.5 < 180$.
-- Như vậy trên graph nhỏ này, A\* expand **cùng số node** với Dijkstra. Đây chính là rủi ro "graph nhỏ thì
-  A\* gần bằng Dijkstra" trong [scope.md §7](scope.md#7-rủi-ro-và-cách-giảm). Để thấy khác biệt rõ ràng phải chạy trên
-  graph HCMC khoảng 150 node và lấy trung bình trên nhiều cặp.
+Tổng: 15 bước, 6 lần expand.
+```
 
-> TODO(P5): thay bảng trên bằng output thật của `format_trace()` cho cả `zero` và `dynamic_ub`, sau đó chạy lại trên
-> một cặp A/B thật của graph HCMC.
+Đọc bảng: bước 4 là `update` B (70 < 100 tìm được ở bước 1), nên bước 9 pop phải nhãn B cũ và `skip`.
+Kết quả **A → C → B → D → F**, 1800 m, 180 s — khớp `MOCK_OPTIMA`.
+
+Với `dynamic_ub` trên mock này, $V_{ub} = 10$ m/s nên $h(n) = d_{geo}(n, F) / 10$. Trace thật cho
+$h(A) = 109.1$, $h(C) = 88.5$, $h(B) = 66.3$, $h(D) = 49.2$, $h(E) = 29.5$ (giây):
+
+```text
+ #  action  node  g (s)  h (s)  f (s)         t  open  note
+--  ------  ----  -----  -----  -----  --------  ----  ---------------------------
+ 0  expand  A       0.0  109.1  109.1  08:00:00     0
+ 1  push    B     100.0   66.3  166.3  08:01:40     1
+ 2  push    C      40.0   88.5  128.5  08:00:40     2
+ 3  expand  C      40.0   88.5  128.5  08:00:40     1
+ 4  update  B      70.0   66.3  136.3  08:01:10     2
+ 5  push    D     160.0   49.2  209.2  08:02:40     3
+ 6  push    E     140.0   29.5  169.5  08:02:20     4
+ 7  expand  B      70.0   66.3  136.3  08:01:10     3
+ 8  update  D     120.0   49.2  169.2  08:02:00     4
+ 9  skip    B     100.0   66.3  166.3  08:01:40     3  nhãn cũ, đã có nhãn tốt hơn
+10  expand  D     120.0   49.2  169.2  08:02:00     2
+11  push    F     180.0    0.0  180.0  08:03:00     3
+12  expand  E     140.0   29.5  169.5  08:02:20     2
+13  expand  F     180.0    0.0  180.0  08:03:00     1
+
+Tổng: 14 bước, 6 lần expand.
+```
+
+- Thứ tự expand: A → C → B → D → E → F, vẫn tìm đúng đường tối ưu.
+- **Vẫn phải expand E**, vì $f(E) = 169.5 < 180$.
+- Như vậy trên graph nhỏ này, A\* expand **cùng số node** với Dijkstra (6/6). Đây chính là rủi ro "graph nhỏ thì
+  A\* gần bằng Dijkstra" trong [scope.md §7](scope.md#7-rủi-ro-và-cách-giảm).
+
+Khác biệt xuất hiện khi traffic làm các cạnh lệch nhau. Với `SyntheticProvider` (Greenshields theo loại đường
+và quận), cặp C → D lúc 17:30:
+
+```text
+zero               cost= 135.24  expanded=5  C>B>D
+static_vmax        cost= 135.24  expanded=3  C>B>D
+dynamic_ub         cost= 135.24  expanded=3  C>B>D
+dynamic_weighted   cost= 151.16  expanded=2  C>D      <- vượt tối ưu 11.77%
+```
+
+Hai heuristic admissible cắt được 5 → 3 node mà vẫn tối ưu; `dynamic_weighted` expand ít nhất (2) nhưng
+**chọn sai đường**. Xem lại bằng:
+
+```bash
+uv run hcmc compare --mock --start C --goal D --time 17:30
+```
 
 ## 5. Validation (M8)
 
@@ -116,8 +185,17 @@ Chạy tất cả bằng `uv run hcmc validate`. Kết quả ghi vào [heuristic
 
 ## 6. Tiêu chí đạt của WP5
 
-- [ ] `zero` cho cost bằng Dijkstra trên mọi cặp test.
-- [ ] `static_vmax` và `dynamic_ub` cho cost tối ưu và expand ít node hơn `zero`.
-- [ ] Không có vi phạm admissibility hay consistency với `zero`, `static_vmax`, `dynamic_ub`.
-- [ ] Có ít nhất một phản ví dụ cho `dynamic_weighted`.
-- [ ] Không có đường đi (ví dụ A → G trên mock) thì trả `RouteResult(found=False)`, không crash.
+- [x] `zero` cho cost bằng Dijkstra trên mọi cặp test (`test_zero_mode_matches_independent_dijkstra`).
+- [x] `static_vmax` và `dynamic_ub` cho cost tối ưu và expand **không nhiều hơn** `zero`
+      (`test_admissible_heuristics_expand_at_most_as_many_nodes`). Trên mock 7 node có cặp bằng nhau; chênh
+      lệch thật phải đo trên graph HCMC.
+- [x] Không có vi phạm admissibility hay consistency với `zero`, `static_vmax`, `dynamic_ub`
+      (`tests/test_admissibility.py`, `tests/test_consistency.py`).
+- [x] Có ít nhất một phản ví dụ cho `dynamic_weighted` (`tests/test_counterexamples.py`; `w = 1.5` trong
+      `configs/default.toml` đã đủ sinh phản ví dụ trên mock).
+- [x] Không có đường đi (A → G trên mock) thì trả `RouteResult(found=False)`, không crash
+      (`test_no_path_returns_found_false`).
+
+Các kiểm tra trên là **bằng chứng lấy mẫu** trên fixture mock, không thay cho chứng minh toán
+([heuristic_proof.md](heuristic_proof.md)) và không chứng minh FIFO trên toàn miền liên tục. Khi WP2 commit
+`data/processed/graph.json`, chạy lại `uv run hcmc validate` (không có `--mock`) trên graph thật.

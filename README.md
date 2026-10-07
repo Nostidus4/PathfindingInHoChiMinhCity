@@ -95,7 +95,7 @@ hcmc-pathfinding/
 | `graph/` | WP2 | P2 | Class `Graph`, dựng đồ thị từ POI, đọc/ghi `graph.json`, kiểm tra liên thông |
 | `traffic/` | WP3 | P3 | Greenshields, profile giờ cao điểm, `SyntheticProvider`, `SpeedBounds` |
 | `cost/` | WP4 | P4 | `speed_model`, `edge_cost`, và 4 heuristic trong `cost/heuristics/` |
-| `search/` | WP5 | P5 | `astar`, `dijkstra`, `trace`, facade `Pathfinder` |
+| `search/` | WP5 | P5 | `astar`, `dijkstra` (oracle độc lập), `trace`, `contracts`, facade `Pathfinder` |
 | `validation/` | WP5 | P5 (`fifo.py`: P3) | Kiểm admissibility, consistency, tìm counterexample, kiểm FIFO |
 | `experiments/` | WP6 | P6 | Sinh kịch bản, chạy thí nghiệm, demo phụ thuộc thời gian, vẽ biểu đồ |
 | `viz/` | WP6 | P6 | `render_map` bằng folium, xuất HTML (T1) |
@@ -179,14 +179,18 @@ Gợi ý đặt tên branch: `wp3/greenshields`, `wp5/astar`, `fix/cli-no-path`.
 | `test_time_dependence.py` | P5 / P6 | Cost giờ cao điểm lớn hơn giờ thấp điểm |
 | `test_cli.py` | P6 | Input sai, trường hợp không có đường |
 
-Các test chưa viết đang được đánh dấu `skip`. Khi cài xong module, hãy xoá dòng
-`pytestmark = pytest.mark.skip(...)` rồi viết test thật.
+Các test chưa viết đang được đánh dấu `skip` (hiện chỉ còn `test_poi_data.py` của P1).
+Khi cài xong module, hãy xoá dòng `pytestmark = pytest.mark.skip(...)` rồi viết test thật.
 
 ```bash
-uv run pytest                          # chạy tất cả
+uv run pytest                          # chạy tất cả -> 210 passed, 7 skipped
 uv run pytest tests/test_astar.py -v   # chạy một file
-uv run pytest --cov=src                # xem coverage
+uv run pytest -q -rs                   # xem lý do các test bị skip
+uv run pytest --cov=src                # xem coverage (hiện 79%)
 ```
+
+Hướng dẫn test đầy đủ — gồm smoke test CLI, bảng exit code, và cách chuyển từ mock sang dữ liệu thật
+sau khi có `graph.json` — xem [docs/testing.md](docs/testing.md).
 
 ## 8. Trạng thái hiện tại
 
@@ -195,7 +199,7 @@ uv run pytest --cov=src                # xem coverage
 - [ ] WP2: Graph (P2)
 - [ ] WP3: Traffic (P3)
 - [ ] WP4: Cost + heuristics (P4)
-- [ ] WP5: Search + validation (P5)
+- [x] WP5: Search + validation (P5)
 - [ ] WP6: Experiments, viz, CLI (P6)
 - [ ] T2: Streamlit app (extra)
 
@@ -212,6 +216,7 @@ Các hàm chưa cài đặt đều `raise NotImplementedError("TODO(Px)")`, tron
 | `docs/heuristic_proof.md` | P4 | Chứng minh admissible và consistent |
 | `docs/algorithm_walkthrough.md` | P5 | Giải thích A\* từng bước, sinh từ `--trace` |
 | `docs/report/` | P6 | Báo cáo tổng hợp |
+| `docs/testing.md` | P6 | Cách test cả project: hướng mock và hướng dữ liệu thật |
 
 ## 10. Lỗi thường gặp
 

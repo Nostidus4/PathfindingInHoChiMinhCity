@@ -12,6 +12,7 @@ Mỗi người viết tài liệu cho WP của mình, người trong cặp revie
 | [heuristic_proof.md](heuristic_proof.md) | P4 | M5, M6 | Edge cost, 4 heuristic, chứng minh admissible và consistent |
 | [algorithm_walkthrough.md](algorithm_walkthrough.md) | P5 | M7, M8 | Time-dependent A\*, Dijkstra, trace, validation |
 | [report/](report/README.md) | P6 | M9, M10 | Dàn ý báo cáo PDF cuối cùng |
+| [testing.md](testing.md) | P6 | M10 | Cách test cả project: hướng mock và hướng dữ liệu thật |
 
 **Quy ước khi viết:**
 
