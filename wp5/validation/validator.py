@@ -1,8 +1,9 @@
 """Sampled checks are evidence on supplied states, not mathematical proofs."""
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+
 from ..algorithms import astar, dijkstra
-from ..algorithms.contracts import nonnegative, checked_edge
+from ..algorithms.contracts import checked_edge, nonnegative
 
 @dataclass
 class ValidationReport:

@@ -1,8 +1,9 @@
 """Structural interfaces: existing WP2/WP4 classes need no inheritance."""
-from typing import Protocol
-from collections.abc import Hashable, Iterable, Collection, Callable
-
 import math
+
+from collections.abc import Callable, Collection, Hashable, Iterable
+from typing import Protocol
+
 
 class RoadSegment(Protocol):
     id: Hashable

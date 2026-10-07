@@ -1,8 +1,8 @@
 """Independent FIFO earliest-arrival Dijkstra oracle (no A* invocation)."""
+from time import perf_counter
 import heapq
 import itertools
 import math
-from time import perf_counter
 
 from .contracts import check_query, checked_edge, nonnegative
 from .result import RouteResult

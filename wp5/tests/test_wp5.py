@@ -3,14 +3,14 @@ import random
 import unittest
 
 from ..algorithms import astar, dijkstra
-from ..examples.mock_data import build_mock, MockGraph, POI, Edge
+from ..demo import parse_time
+from ..examples.mock_data import POI, Edge, MockGraph, build_mock
 from ..validation import (
-    check_fifo,
     check_admissibility,
     check_consistency,
+    check_fifo,
     compare_routes,
 )
-from ..demo import parse_time
 
 class WP5Tests(unittest.TestCase):
     def setUp(self):
@@ -77,11 +77,15 @@ class WP5Tests(unittest.TestCase):
             self.assertIn('open_set',entry)
         self.assertIsNone(astar(self.g,'S','G',0,self.cost,self.h).trace)
     def test_invalid_inputs(self):
-        for algo in [astar,dijkstra]:
-            for value in [-1,float('nan')]:
-                args=(self.g,'S','G',0,lambda e,t:value)
+        for algo in [astar, dijkstra]:
+            for value in [-1, float('nan')]:
+                def make_cost(v):
+                    def cost(e, t):
+                        return v
+                    return cost
+                args = (self.g, 'S', 'G', 0, make_cost(value))
                 with self.assertRaises(ValueError):
-                    algo(*args,self.h) if algo is astar else algo(*args)
+                    algo(*args, self.h) if algo is astar else algo(*args)
         with self.assertRaises(ValueError):
             astar(self.g,'X','G',0,self.cost,self.h)
         with self.assertRaises(ValueError):

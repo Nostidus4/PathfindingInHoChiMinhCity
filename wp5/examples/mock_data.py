@@ -4,7 +4,7 @@ Traffic is a mock, not a Greenshields implementation: WP3/WP4 replace it.
 Its speed decreases smoothly, so arrival t+c(e,t) is increasing analytically.
 """
 from dataclasses import dataclass
-from math import radians, sin, cos, asin, sqrt
+from math import asin, cos, radians, sin, sqrt
 
 MODES = ('zero', 'static_vmax', 'dynamic_ub', 'dynamic_weighted')
 
