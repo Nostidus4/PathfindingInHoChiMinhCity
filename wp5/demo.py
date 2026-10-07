@@ -5,8 +5,8 @@ from pathlib import Path
 
 from .algorithms import astar, dijkstra
 from .examples.mock_data import MODES, build_mock
-
 from .validation import check_admissibility, check_consistency, check_fifo, compare_routes
+
 
 def parse_time(value):
     try:

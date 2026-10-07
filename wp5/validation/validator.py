@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from ..algorithms import astar, dijkstra
 from ..algorithms.contracts import checked_edge, nonnegative
 
+
 @dataclass
 class ValidationReport:
     check: str

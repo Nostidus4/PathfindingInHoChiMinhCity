@@ -12,6 +12,7 @@ from ..validation import (
     compare_routes,
 )
 
+
 class WP5Tests(unittest.TestCase):
     def setUp(self):
         self.g, self.traffic, self.h = build_mock()

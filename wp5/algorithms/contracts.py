@@ -1,6 +1,5 @@
 """Structural interfaces: existing WP2/WP4 classes need no inheritance."""
 import math
-
 from collections.abc import Callable, Collection, Hashable, Iterable
 from typing import Protocol
 

@@ -3,6 +3,7 @@ from collections.abc import Hashable
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+
 @dataclass
 class RouteResult:
     path: list[Hashable]

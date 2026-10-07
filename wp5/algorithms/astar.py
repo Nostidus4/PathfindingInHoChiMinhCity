@@ -4,14 +4,15 @@ Optimality requires an admissible heuristic (including h(goal,t)=0).
 Inconsistent heuristics are supported through reopening. Weighted heuristics
 are accepted for experiments, but do not carry an optimality guarantee.
 """
-from dataclasses import dataclass
 import heapq
 import itertools
 import math
+from dataclasses import dataclass
 from time import perf_counter
 
 from .contracts import check_query, checked_edge, nonnegative
 from .result import RouteResult
+
 
 @dataclass(frozen=True)
 class _Label:
