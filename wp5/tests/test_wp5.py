@@ -1,10 +1,16 @@
 import math
 import random
 import unittest
-from algorithms import astar, dijkstra
-from examples.mock_data import build_mock, MockGraph, POI, Edge
-from validation import check_fifo, check_admissibility, check_consistency, compare_routes
-from demo import parse_time
+
+from ..algorithms import astar, dijkstra
+from ..examples.mock_data import build_mock, MockGraph, POI, Edge
+from ..validation import (
+    check_fifo,
+    check_admissibility,
+    check_consistency,
+    compare_routes,
+)
+from ..demo import parse_time
 
 class WP5Tests(unittest.TestCase):
     def setUp(self):
@@ -95,7 +101,8 @@ class WP5Tests(unittest.TestCase):
     def test_reopening_with_admissible_inconsistent_h(self):
         g=MockGraph([POI(n,0,0) for n in 'SBAG'],
             [Edge('SA','S','A',5),Edge('SB','S','B',1),Edge('BA','B','A',1),Edge('AG','A','G',10)])
-        h=lambda n,*args: {'S':0,'B':10,'A':0,'G':0}[n]
+        def h(n, *args):
+            return {'S': 0, 'B': 10, 'A': 0, 'G': 0}[n]
         r=astar(g,'S','G',0,lambda e,t:e.length_m,h,trace=True)
         self.assertEqual(r.path,['S','B','A','G'])
         self.assertEqual(r.total_travel_time,12)
@@ -103,13 +110,19 @@ class WP5Tests(unittest.TestCase):
     def test_random_fifo_graphs_against_independent_oracle(self):
         rng=random.Random(2026)
         for _ in range(20):
-            edges=[Edge(f'{u}-{v}',u,v,rng.randint(1,100)) for u in range(8)
-                   for v in range(8) if u!=v and rng.random()<.3]
-            g=MockGraph([POI(n,0,0) for n in range(8)],edges)
-            c=lambda e,t:e.length_m*(1+t/86400)
-            r=compare_routes(g,[(u,v,t) for u in g.nodes for v in g.nodes for t in [0,28800]],
-                             c,lambda *args:0,['zero'])
-            self.assertTrue(r.valid,r.violations[:1])
+            edges = [Edge(f'{u}-{v}', u, v, rng.randint(1, 100)) for u in range(8)
+                     for v in range(8) if u != v and rng.random() < .3]
+            g = MockGraph([POI(n, 0, 0) for n in range(8)], edges)
+            def c(e, t):
+                return e.length_m * (1 + t / 86400)
+            r = compare_routes(
+                g,
+                [(u, v, t) for u in g.nodes for v in g.nodes for t in [0, 28800]],
+                c,
+                lambda *args: 0,
+                ['zero'],
+            )
+            self.assertTrue(r.valid, r.violations[:1])
     def test_zero_cost_cycle(self):
         g=MockGraph([POI(n,0,0) for n in 'SAG'],
             [Edge('SA','S','A',0),Edge('AS','A','S',0),Edge('AG','A','G',1)])

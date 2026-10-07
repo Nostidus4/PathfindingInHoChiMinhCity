@@ -35,8 +35,14 @@ def check_admissibility(graph, nodes, goals, times, edge_cost, heuristic,
                 report.checked += 1
                 actual = optimal.total_travel_time
                 if h > actual + tolerance:
-                    report.violations.append({'node': node, 'goal': goal, 'time': t,
-                                              'heuristic': h, 'optimal': actual, 'excess': h-actual})
+                    report.violations.append({
+                        'node': node,
+                        'goal': goal,
+                        'time': t,
+                        'heuristic': h,
+                        'optimal': actual,
+                        'excess': h - actual,
+                    })
     return report
 
 def check_consistency(graph, goals, times, edge_cost, heuristic,
@@ -50,7 +56,12 @@ def check_consistency(graph, goals, times, edge_cost, heuristic,
             h_goal = nonnegative(heuristic(goal, goal, t, mode), 'heuristic')
             report.checked += 1
             if h_goal > tolerance:
-                report.violations.append({'goal': goal, 'time': t, 'reason': 'h(goal,t) != 0', 'h': h_goal})
+                report.violations.append({
+                    'goal': goal,
+                    'time': t,
+                    'reason': 'h(goal,t) != 0',
+                    'h': h_goal,
+                })
             for u in graph.nodes:
                 for edge in graph.get_neighbors(u):
                     checked_edge(graph, edge, u)
@@ -62,9 +73,17 @@ def check_consistency(graph, goals, times, edge_cost, heuristic,
                     hv = nonnegative(heuristic(edge.v, goal, t+c, mode), 'heuristic')
                     report.checked += 1
                     if hu > c + hv + tolerance:
-                        report.violations.append({'edge_id': edge.id, 'u': u, 'v': edge.v,
-                                                  'goal': goal, 'time': t, 'h_u': hu,
-                                                  'cost': c, 'h_v': hv, 'excess': hu-c-hv})
+                        report.violations.append({
+                            'edge_id': edge.id,
+                            'u': u,
+                            'v': edge.v,
+                            'goal': goal,
+                            'time': t,
+                            'h_u': hu,
+                            'cost': c,
+                            'h_v': hv,
+                            'excess': hu - c - hv,
+                        })
     return report
 
 def check_fifo(graph, times, edge_cost, tolerance=1e-6):
@@ -88,8 +107,13 @@ def check_fifo(graph, times, edge_cost, tolerance=1e-6):
                     report.checked += 1
                     pt, pa = previous
                     if arrival + tolerance < pa:
-                        report.violations.append({'edge_id': edge.id, 't1': pt, 't2': t,
-                                                  'arrival1': pa, 'arrival2': arrival})
+                        report.violations.append({
+                            'edge_id': edge.id,
+                            't1': pt,
+                            't2': t,
+                            'arrival1': pa,
+                            'arrival2': arrival,
+                        })
                 previous = t, arrival
     return report
 
@@ -106,9 +130,14 @@ def compare_routes(graph, queries, edge_cost, heuristic, modes, tolerance=1e-6):
             if oracle is not None and result is not None:
                 mismatch = abs(result.total_travel_time - oracle.total_travel_time) > tolerance
             if mismatch:
-                report.violations.append({'start': start, 'goal': goal, 'time': t, 'mode': mode,
-                                          'astar_cost': None if result is None else result.total_travel_time,
-                                          'dijkstra_cost': None if oracle is None else oracle.total_travel_time,
-                                          'astar_path': None if result is None else result.path,
-                                          'dijkstra_path': None if oracle is None else oracle.path})
+                report.violations.append({
+                    'start': start,
+                    'goal': goal,
+                    'time': t,
+                    'mode': mode,
+                    'astar_cost': None if result is None else result.total_travel_time,
+                    'dijkstra_cost': None if oracle is None else oracle.total_travel_time,
+                    'astar_path': None if result is None else result.path,
+                    'dijkstra_path': None if oracle is None else oracle.path,
+                })
     return report
