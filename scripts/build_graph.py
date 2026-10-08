@@ -1,6 +1,6 @@
 """Script WP2 (P2): pois.csv + OSM -> data/processed/graph.json.
 
-Chạy: uv sync --group data && uv run python scripts/build_graph.py --k 6
+Chạy: uv sync --group data && uv run python scripts/build_graph.py --k 4
 Các bước: load_pois -> fetch_road_network -> build_graph -> run_all_checks -> save_graph.
 Thêm --preview để xuất outputs/graph_preview.html (vẽ POI và cạnh lên bản đồ).
 """
@@ -103,7 +103,7 @@ def render_graph_preview(graph: Graph, out_path: Path = PREVIEW_PATH) -> Path:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Dựng graph POI từ pois.csv và mạng đường OSM")
-    parser.add_argument("--k", type=int, default=6, help="số POI gần nhất để thử nối (mặc định 6)")
+    parser.add_argument("--k", type=int, default=4, help="số POI gần nhất để thử nối (mặc định 4)")
     parser.add_argument("--pois", type=Path, default=DEFAULT_POIS_PATH)
     parser.add_argument("--osm", type=Path, default=None, help="file graphml (mặc định: cache P1)")
     parser.add_argument("--out", type=Path, default=DEFAULT_GRAPH_PATH)
