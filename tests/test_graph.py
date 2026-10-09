@@ -252,13 +252,22 @@ def test_build_graph_respects_oneway():
     assert there.road_type == "primary" and back.road_type == "residential"
 
 
-def test_build_graph_reports_disconnected():
+def test_build_graph_snaps_dead_end_into_main_component():
     from src.graph.builder import build_graph_with_report
 
-    graph, report = build_graph_with_report(_ONEWAY_POIS, _oneway_osm(with_return=False), k=1)
-    assert {e.id for e in graph.edges()} == {"X->Y"}
-    assert report.no_path >= 1
-    assert report.warnings and check_strongly_connected(graph)
+    # 0 <-> 1 <-> 2 hai chiều, thêm nhánh cụt một chiều 2 -> 3 (vào được nhưng không ra được)
+    coords = {0: (10.7700, 106.7000), 1: (10.7700, 106.7010), 2: (10.7700, 106.7020)}
+    coords[3] = (10.7704, 106.7024)
+    edges = [(0, 1, "primary"), (1, 0, "primary"), (1, 2, "primary"), (2, 1, "primary")]
+    osm = _osm(coords, [*edges, (2, 3, "residential")])
+    pois = [
+        POI("X", "x", 10.7700, 106.7000, "Quan 5"),
+        POI("Z", "z", 10.7704, 106.7024, "Quan 5"),  # nằm đúng node cụt 3
+    ]
+    graph, report = build_graph_with_report(pois, osm, k=1)
+    assert {e.id for e in graph.edges()} == {"X->Z", "Z->X"}
+    assert any(r.startswith("Z ") for r in report.repairs)
+    assert run_all_checks(graph) == []
 
 
 # --- graph.json thật (chỉ chạy khi đã commit file) ---

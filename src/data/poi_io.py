@@ -8,7 +8,6 @@ from pathlib import Path
 from src.config import REPO_ROOT
 from src.models import POI
 
-
 DEFAULT_POIS_PATH = REPO_ROOT / "data" / "processed" / "pois.csv"
 
 FIELDS = (

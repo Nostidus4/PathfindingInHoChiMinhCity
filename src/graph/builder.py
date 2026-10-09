@@ -1,14 +1,16 @@
 """Xây đồ thị POI từ mạng đường OSM. Owner: P2.
 
 Nhiệm vụ build_graph(pois, osm_graph, k):
-- Với mỗi POI, nối tới k POI gần nhất (k ≈ 6-8 theo proposal) bằng đường ngắn nhất trên mạng OSM.
+- Với mỗi POI, nối tới k POI gần nhất bằng đường ngắn nhất trên mạng OSM
+  (proposal gợi ý k ≈ 6-8; với dữ liệu thật chọn k = 4 để degree trung bình 3-4).
 - Lọc cạnh mà đường đi xuyên qua POI khác (để cạnh là "trực tiếp").
 - Áp one-way từ OSM (chỉ tạo chiều đi được).
 - Lưu length_m, road_type, district, lanes, geometry (polyline thật) vào RoadSegment.
 Cần `uv sync --group data` (osm_graph là networkx graph của osmnx).
 
 Chi tiết:
-- Snap POI vào node OSM gần nhất (thuần Python, không cần scikit-learn).
+- Snap POI vào node OSM gần nhất thuộc thành phần liên thông mạnh lớn nhất của mạng OSM
+  (thuần Python, không cần scikit-learn).
 - length_m = độ dài đường OSM + khoảng cách snap ở 2 đầu, nên luôn >= haversine giữa 2 POI
   (bất đẳng thức tam giác) - điều kiện để heuristic admissible.
 - Mỗi cặp ứng viên tính riêng 2 chiều u->v và v->u trên đồ thị có hướng, nên one-way tự đúng.
@@ -89,9 +91,18 @@ def _first_name(name) -> str:
     return str(name) if name and not (isinstance(name, float) and math.isnan(name)) else ""
 
 
-def snap_pois(pois: list[POI], osm_graph) -> dict[NodeId, tuple[object, float]]:
-    """POI id -> (node OSM gần nhất, khoảng cách mét). Quét hết node, dùng haversine."""
-    coords = [(n, float(d["y"]), float(d["x"])) for n, d in osm_graph.nodes(data=True)]
+def snap_pois(
+    pois: list[POI], osm_graph, allowed: set | None = None
+) -> dict[NodeId, tuple[object, float]]:
+    """POI id -> (node OSM gần nhất, khoảng cách mét). Quét hết node, dùng haversine.
+
+    allowed: nếu có thì chỉ snap vào các node trong tập này.
+    """
+    coords = [
+        (n, float(d["y"]), float(d["x"]))
+        for n, d in osm_graph.nodes(data=True)
+        if allowed is None or n in allowed
+    ]
     if not coords:
         raise ValueError("Mạng đường OSM rỗng")
     result: dict[NodeId, tuple[object, float]] = {}
@@ -183,7 +194,7 @@ def _scc_outside_largest(node_ids: list[NodeId], edges: dict[str, RoadSegment]) 
 
 
 def build_graph_with_report(
-    pois: list[POI], osm_graph, k: int = 6, max_extra_k: int = 4
+    pois: list[POI], osm_graph, k: int = 4, max_extra_k: int = 4
 ) -> tuple[Graph, BuildReport]:
     """Như build_graph nhưng trả thêm BuildReport (số cạnh bị lọc, các lần sửa liên thông...)."""
     import networkx as nx
@@ -195,7 +206,17 @@ def build_graph_with_report(
         raise ValueError("Trùng id POI")
     report = BuildReport(k=k)
 
-    snap = snap_pois(pois, osm_graph)
+    # Chỉ snap vào thành phần liên thông mạnh lớn nhất của mạng OSM: node ngoài thành phần này
+    # (đường cụt một chiều, đường bị cắt ở biên vùng tải) không thể nối hai chiều với POI khác.
+    main_component = max(nx.strongly_connected_components(osm_graph), key=len)
+    nearest = snap_pois(pois, osm_graph)
+    snap = snap_pois(pois, osm_graph, main_component)
+    for pid, (node, dist) in snap.items():
+        if node != nearest[pid][0]:
+            report.repairs.append(
+                f"{pid} nằm ngoài thành phần liên thông mạnh của mạng OSM, "
+                f"snap sang node {node} cách {dist:.0f} m"
+            )
     owners: dict[object, list[NodeId]] = {}
     for pid, (node, dist) in snap.items():
         owners.setdefault(node, []).append(pid)
@@ -282,6 +303,6 @@ def build_graph_with_report(
     return Graph(pois, edges.values()), report
 
 
-def build_graph(pois: list[POI], osm_graph, k: int = 6) -> Graph:
+def build_graph(pois: list[POI], osm_graph, k: int = 4) -> Graph:
     """Tạo Graph nối mỗi POI với k POI gần nhất."""
     return build_graph_with_report(pois, osm_graph, k)[0]
