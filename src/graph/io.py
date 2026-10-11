@@ -1,14 +1,12 @@
-"""Đọc/ghi đồ thị ra data/processed/graph.json. Owner: P2.
+"""Đọc/ghi graph ra data/processed/graph.json. Owner: P2.
 
-- save_graph(graph, path), load_graph(path)
-- load_default_graph(): đọc data/processed/graph.json (file đã commit),
-  để P3-P6 không cần cài osmnx.
-Định dạng file xem docs/graph_construction.md (mục 4).
+Schema: docs/graph_construction.md §4.
 """
 
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict
 from pathlib import Path
 
@@ -19,7 +17,7 @@ from src.models import POI, RoadSegment
 DEFAULT_GRAPH_PATH = REPO_ROOT / "data" / "processed" / "graph.json"
 SCHEMA_VERSION = 1
 
-_COORD_DIGITS = 7  # ~1 cm, đủ cho bản đồ mà file không quá lớn
+_COORD_DIGITS = 7
 _LENGTH_DIGITS = 2
 
 
@@ -32,7 +30,9 @@ def _node_to_dict(p: POI) -> dict:
 
 def _edge_to_dict(e: RoadSegment) -> dict:
     d = asdict(e)
-    d["length_m"] = round(e.length_m, _LENGTH_DIGITS)
+    # Làm tròn LÊN để length_m đã lưu vẫn >= haversine
+    scale = 10**_LENGTH_DIGITS
+    d["length_m"] = math.ceil(round(e.length_m * scale, 6)) / scale
     d["geometry"] = [
         [round(lat, _COORD_DIGITS), round(lon, _COORD_DIGITS)] for lat, lon in e.geometry
     ]
@@ -40,7 +40,6 @@ def _edge_to_dict(e: RoadSegment) -> dict:
 
 
 def save_graph(graph: Graph, path: Path = DEFAULT_GRAPH_PATH) -> None:
-    """Ghi graph ra JSON (sắp xếp theo id để diff git gọn)."""
     data = {
         "version": SCHEMA_VERSION,
         "nodes": [_node_to_dict(p) for p in sorted(graph.nodes(), key=lambda p: p.id)],
@@ -54,7 +53,6 @@ def save_graph(graph: Graph, path: Path = DEFAULT_GRAPH_PATH) -> None:
 
 
 def load_graph(path: Path) -> Graph:
-    """Đọc graph từ JSON. File thiếu -> FileNotFoundError, sai version -> ValueError."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(
@@ -74,5 +72,4 @@ def load_graph(path: Path) -> Graph:
 
 
 def load_default_graph() -> Graph:
-    """Đồ thị chuẩn của cả nhóm (data/processed/graph.json)."""
     return load_graph(DEFAULT_GRAPH_PATH)

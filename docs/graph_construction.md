@@ -31,8 +31,11 @@ Hàm `build_graph(pois, osm_graph, k)` trong `src/graph/builder.py`:
    chiều). Khoảng cách snap được cộng vào `length_m` nên vẫn bảo đảm bước 5.
 2. Với mỗi POI, tìm **đường ngắn nhất trên mạng OSM** tới $k$ POI gần nhất (proposal gợi ý $k \approx 6$–$8$; chọn $k = 4$, xem bên dưới).
 3. **Chỉ giữ edge** nếu đường đó không đi xuyên qua POI khác. Như vậy tránh được edge dài thừa, vì đoạn
-   A→C đi qua B thì đã được biểu diễn bằng A→B→C.
-4. Áp hướng **one-way**, kiểm tra graph **liên thông mạnh**, xử lý các node bị cô lập.
+   A→C đi qua B có thể biểu diễn bằng A→B→C; bước 4 kiểm tra không POI nào bị cắt rời vì bộ lọc này.
+4. Đường đi tính trên mạng OSM **có hướng** nên **one-way** tự đúng: hai chiều u→v và v→u có thể đi đường
+   khác nhau, dài khác nhau. Với dữ liệu thật mọi cặp đều đi được hai chiều; một cạnh chỉ thiếu chiều ngược khi
+   đường đi chiều đó xuyên qua POI khác (bị lọc ở bước 3). Sau đó kiểm tra graph **liên thông mạnh**, xử lý
+   các node bị cô lập.
 5. Kiểm tra $\text{length}(u, v) \ge \text{haversine}(u, v)$ cho mọi edge. Đây là điều kiện cần để
    heuristic admissible (xem [heuristic_proof.md](heuristic_proof.md)).
 
@@ -64,7 +67,7 @@ Hàm `build_graph(pois, osm_graph, k)` trong `src/graph/builder.py`:
 | `road_type` | str | Tag `highway` của OSM: `primary`, `secondary`, `tertiary`, `residential`… |
 | `district` | str | Quận, dùng để áp hệ số traffic |
 | `name` | str | Tên đường |
-| `lanes` | int | Số làn, dùng để tính capacity |
+| `lanes` | int | Số làn từ OSM (mặc định 1); mô hình traffic hiện tại chưa dùng |
 | `geometry` | tuple[(lat, lon)] | Polyline thật để vẽ bản đồ |
 
 > Proposal có liệt kê thêm `speed_limit` và `oneway`. Trong code, tốc độ tự do lấy theo `road_type` từ
@@ -126,7 +129,7 @@ Mỗi phần tử `edges` (khớp dataclass `RoadSegment`):
 | --- | --- | --- |
 | `id` | str | `"<source>-><target>"`, duy nhất |
 | `source`, `target` | str | `id` của POI, phải có trong `nodes` |
-| `length_m` | float | Mét, làm tròn 2 chữ số, luôn ≥ haversine(source, target) |
+| `length_m` | float | Mét, làm tròn **lên** 2 chữ số nên luôn ≥ haversine(source, target) |
 | `road_type` | str | `primary`, `secondary`, `tertiary`, `residential` hoặc `default` |
 | `district` | str | Quận của POI `source` |
 | `name` | str | Tên đường, có thể rỗng |
@@ -159,7 +162,7 @@ Build ngày 08/10/2026, $k = 4$, từ `pois.csv` hiện tại:
 | Số node | 150 (30 mỗi quận, gồm 4 landmark mỗi quận) |
 | Số edge | 608 |
 | Degree trung bình (ra / vào) | 4,05 |
-| Số edge one-way | 70 |
+| Số edge không có chiều ngược | 70 |
 | Chiều dài edge (min / trung vị / max) | 246 / 676 / 3 477 m |
 | Tỉ lệ length / haversine trung bình | 1,55 |
 
@@ -203,7 +206,7 @@ Chưa có `graph.json` thì dùng `MockGraph` trong `src/mocks.py` (cùng interf
 **Cam kết của graph thật** (kiểm bằng `src/graph/checks.py`, script không ghi file nếu có lỗi):
 
 - Liên thông mạnh: mọi POI đi tới được mọi POI. Không có node cô lập.
-- Mọi cạnh có `length_m ≥ haversine(source, target)` (sai số 1 m).
+- Mọi cạnh có `length_m ≥ haversine(source, target)` (chỉ chừa sai số dấu phẩy động 1 µm).
 - ≥ 100 node, ≥ 20 node mỗi quận.
 
 **Quy ước dữ liệu:**
@@ -223,7 +226,7 @@ Chưa có `graph.json` thì dùng `MockGraph` trong `src/mocks.py` (cùng interf
 | WP | Cần biết |
 | --- | --- |
 | P1 (WP1) | Xem 7.1. Thay POI bị báo lỗi nhưng vẫn giữ ≥ 20 POI mỗi quận |
-| P3 (WP3) | Dùng `road_type`, `lanes`, `district` của cạnh cho profile và capacity. 150 node, 608 cạnh |
+| P3 (WP3) | Dùng `road_type`, `district` của cạnh cho profile (`lanes` có sẵn nhưng mô hình hiện tại chưa dùng). 150 node, 608 cạnh |
 | P4 (WP4) | Chứng minh admissibility dựa vào `length_m ≥ haversine`: đường OSM + hai đoạn snap không thể ngắn hơn đường thẳng (bất đẳng thức tam giác) |
 | P5 (WP5) | Graph thật liên thông mạnh nên không có ca no-path; test no-path dùng `MockGraph` (`A→G`). Kiểm id hợp lệ bằng `{p.id for p in graph.nodes()}` hoặc bắt `KeyError`, rồi đổi thành `ValueError` trong `Pathfinder` |
 | P6 (WP6) | Vẽ route bằng `edge.geometry`, tên đường `edge.name` (rỗng thì hiện `road_type`). POI có `name`, `district`, `kind` cho `list-pois`. Folium bản hiện tại cần API key cho tiles `cartodbpositron`, nên dùng tiles mặc định |
@@ -237,4 +240,4 @@ uv run python scripts/build_graph.py --osm data/raw/hcmc_drive.graphml --out /tm
 ```
 
 Script in thống kê (dùng cho mục 6), các lần sửa liên thông và cảnh báo; `--preview` xuất
-`outputs/graph_preview.html` (cạnh one-way màu đỏ). Có lỗi kiểm tra thì thoát mã 1 và không ghi file.
+`outputs/graph_preview.html` (cạnh không có chiều ngược màu đỏ). Có lỗi kiểm tra thì thoát mã 1 và không ghi file.

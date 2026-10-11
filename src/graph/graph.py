@@ -1,12 +1,4 @@
-"""Class Graph: đồ thị có hướng giữa các POI. Owner: P2.
-
-Interface (MockGraph trong mocks.py có cùng interface):
-- get_neighbors(node) -> list[RoadSegment]   các cạnh đi ra
-- get_node(node) -> POI
-- get_edge(edge_id) -> RoadSegment
-- nodes() -> list[POI], edges() -> list[RoadSegment]
-Graph không biết gì về traffic; chỉ chứa cấu trúc tĩnh.
-"""
+"""Class Graph: đồ thị có hướng giữa các POI, chỉ chứa cấu trúc tĩnh. Owner: P2."""
 
 from __future__ import annotations
 
@@ -16,6 +8,8 @@ from src.models import POI, EdgeId, NodeId, RoadSegment
 
 
 class Graph:
+    """Cùng interface với MockGraph: get_neighbors, get_node, get_edge, nodes, edges."""
+
     def __init__(self, pois: Iterable[POI], edges: Iterable[RoadSegment]) -> None:
         self._nodes: dict[NodeId, POI] = {}
         for p in pois:
@@ -42,11 +36,9 @@ class Graph:
         return node in self._nodes
 
     def get_neighbors(self, node: NodeId) -> list[RoadSegment]:
-        """Các cạnh đi ra từ node."""
         return list(self._out.get(node, []))
 
     def get_in_edges(self, node: NodeId) -> list[RoadSegment]:
-        """Các cạnh đi vào node (dùng cho kiểm tra liên thông)."""
         return list(self._in.get(node, []))
 
     def get_node(self, node: NodeId) -> POI:

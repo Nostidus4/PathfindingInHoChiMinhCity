@@ -1,10 +1,6 @@
-"""Kiểm tra tính đúng của đồ thị. Owner: P2.
+"""Kiểm tra graph, trả list lỗi (rỗng = OK). Owner: P2.
 
-Nhiệm vụ (trả list lỗi, rỗng = OK):
-- Liên thông mạnh (mọi POI đi tới được mọi POI).
-- Không có node cô lập.
-- Mọi cạnh có length_m >= haversine(source, target) (điều kiện để heuristic admissible).
-Viết thuần Python (không dùng networkx) để chạy được khi chưa cài group data.
+Thuần Python (không networkx) để chạy được khi chưa cài group data.
 """
 
 from __future__ import annotations
@@ -20,7 +16,6 @@ _MAX_LISTED = 10
 
 
 def _reachable(start: NodeId, step: Callable[[NodeId], list[NodeId]]) -> set[NodeId]:
-    """BFS từ start, step(node) trả danh sách node kề."""
     seen = {start}
     queue = deque([start])
     while queue:
@@ -38,7 +33,7 @@ def _short_list(ids: list[NodeId]) -> str:
 
 
 def check_strongly_connected(graph: Graph) -> list[str]:
-    """Liên thông mạnh <=> từ một node bất kỳ, đi xuôi và đi ngược đều tới được mọi node."""
+    """Từ một node bất kỳ, đi xuôi và đi ngược đều phải tới được mọi node."""
     ids = [p.id for p in graph.nodes()]
     if not ids:
         return ["Đồ thị rỗng"]
@@ -58,7 +53,6 @@ def check_strongly_connected(graph: Graph) -> list[str]:
 
 
 def check_isolated_nodes(graph: Graph) -> list[str]:
-    """Node không có cạnh ra hoặc không có cạnh vào."""
     errors = []
     for p in graph.nodes():
         if not graph.get_neighbors(p.id):
@@ -68,14 +62,14 @@ def check_isolated_nodes(graph: Graph) -> list[str]:
     return errors
 
 
-def check_length_vs_haversine(graph: Graph, tol_m: float = 1.0) -> list[str]:
-    """Mọi cạnh phải có length_m >= khoảng cách chim bay giữa 2 đầu (sai số tol_m)."""
+def check_length_vs_haversine(graph: Graph, tol_m: float = 1e-6) -> list[str]:
+    """Mọi cạnh phải có length_m >= haversine (tol_m chỉ cho sai số dấu phẩy động)."""
     errors = []
     for e in graph.edges():
         a, b = graph.get_node(e.source), graph.get_node(e.target)
         d = haversine_m(a.lat, a.lon, b.lat, b.lon)
         if e.length_m + tol_m < d:
-            errors.append(f"Cạnh {e.id}: length_m={e.length_m:.1f} < haversine={d:.1f}")
+            errors.append(f"Cạnh {e.id}: length_m={e.length_m:.3f} < haversine={d:.3f}")
     return errors
 
 

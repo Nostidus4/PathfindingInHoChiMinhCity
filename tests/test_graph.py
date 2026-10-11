@@ -132,6 +132,19 @@ def test_save_load_round_trip(tmp_path):
     assert "Bến Thành" in path.read_text(encoding="utf-8")
 
 
+def test_save_rounds_length_up(tmp_path):
+    a = POI("A", "a", 10.7700, 106.7000, "Quan 1")
+    b = POI("B", "b", 10.7800, 106.7000, "Quan 1")
+    straight = haversine_m(a.lat, a.lon, b.lat, b.lon)
+    path = tmp_path / "graph.json"
+    save_graph(Graph([a, b], [RoadSegment("A->B", "A", "B", straight)]), path)
+    loaded = load_graph(path)
+    assert check_length_vs_haversine(loaded, tol_m=0.0) == []
+    assert loaded.get_edge("A->B").length_m - straight < 0.01
+    save_graph(loaded, path)
+    assert load_graph(path).get_edge("A->B").length_m == loaded.get_edge("A->B").length_m
+
+
 def test_load_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         load_graph(tmp_path / "nope.json")

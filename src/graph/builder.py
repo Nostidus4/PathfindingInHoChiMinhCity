@@ -1,20 +1,6 @@
-"""Xây đồ thị POI từ mạng đường OSM. Owner: P2.
+"""Dựng graph POI từ mạng đường OSM (thuật toán: docs/graph_construction.md §2). Owner: P2.
 
-Nhiệm vụ build_graph(pois, osm_graph, k):
-- Với mỗi POI, nối tới k POI gần nhất bằng đường ngắn nhất trên mạng OSM
-  (proposal gợi ý k ≈ 6-8; với dữ liệu thật chọn k = 4 để degree trung bình 3-4).
-- Lọc cạnh mà đường đi xuyên qua POI khác (để cạnh là "trực tiếp").
-- Áp one-way từ OSM (chỉ tạo chiều đi được).
-- Lưu length_m, road_type, district, lanes, geometry (polyline thật) vào RoadSegment.
-Cần `uv sync --group data` (osm_graph là networkx graph của osmnx).
-
-Chi tiết:
-- Snap POI vào node OSM gần nhất thuộc thành phần liên thông mạnh lớn nhất của mạng OSM
-  (thuần Python, không cần scikit-learn).
-- length_m = độ dài đường OSM + khoảng cách snap ở 2 đầu, nên luôn >= haversine giữa 2 POI
-  (bất đẳng thức tam giác) - điều kiện để heuristic admissible.
-- Mỗi cặp ứng viên tính riêng 2 chiều u->v và v->u trên đồ thị có hướng, nên one-way tự đúng.
-- Nếu chưa liên thông mạnh: tăng k cho các node lẻ, rồi thêm lại cạnh đã bị lọc.
+Cần `uv sync --group data` (osm_graph là networkx MultiDiGraph của osmnx).
 """
 
 from __future__ import annotations
@@ -31,7 +17,7 @@ from src.models import POI, LatLon, NodeId, RoadSegment
 
 log = logging.getLogger(__name__)
 
-# highway tag OSM -> khoá trong [greenshields.free_flow_kmh] của configs/default.toml
+# highway tag OSM -> khoá trong [greenshields.free_flow_kmh]
 _ROAD_CLASS: dict[str, str] = {
     "motorway": "primary",
     "trunk": "primary",
@@ -45,13 +31,11 @@ _ROAD_CLASS: dict[str, str] = {
 }
 _ROAD_RANK = {"primary": 0, "secondary": 1, "tertiary": 2, "residential": 3, "default": 4}
 
-_SNAP_WARN_M = 100.0  # snap xa hơn ngưỡng này thì cảnh báo (có thể POI nằm ngoài mạng đường)
+_SNAP_WARN_M = 100.0
 
 
 @dataclass
 class BuildReport:
-    """Thống kê quá trình dựng graph, dùng để ghi vào docs/graph_construction.md."""
-
     k: int
     candidate_pairs: int = 0
     no_path: int = 0
@@ -68,10 +52,7 @@ class _Candidate:
 
 
 def normalize_road_type(highway) -> str:
-    """Chuẩn hoá tag highway (chuỗi hoặc list) về primary/secondary/tertiary/residential/default.
-
-    Nếu là list thì lấy loại đường cấp cao nhất.
-    """
+    """Tag highway (chuỗi hoặc list) -> loại đường cấp cao nhất trong _ROAD_CLASS."""
     tags = highway if isinstance(highway, list | tuple) else [highway]
     classes = [_ROAD_CLASS.get(str(t).removesuffix("_link"), "default") for t in tags if t]
     return min(classes, key=_ROAD_RANK.__getitem__, default="default")
@@ -94,10 +75,7 @@ def _first_name(name) -> str:
 def snap_pois(
     pois: list[POI], osm_graph, allowed: set | None = None
 ) -> dict[NodeId, tuple[object, float]]:
-    """POI id -> (node OSM gần nhất, khoảng cách mét). Quét hết node, dùng haversine.
-
-    allowed: nếu có thì chỉ snap vào các node trong tập này.
-    """
+    """POI id -> (node OSM gần nhất, khoảng cách mét); allowed giới hạn tập node được chọn."""
     coords = [
         (n, float(d["y"]), float(d["x"]))
         for n, d in osm_graph.nodes(data=True)
@@ -108,7 +86,6 @@ def snap_pois(
     result: dict[NodeId, tuple[object, float]] = {}
     for p in pois:
         cos_lat = math.cos(math.radians(p.lat))
-        # Lọc nhanh bằng xấp xỉ phẳng, rồi tính haversine cho node tốt nhất
         best = min(coords, key=lambda c: (c[1] - p.lat) ** 2 + ((c[2] - p.lon) * cos_lat) ** 2)
         result[p.id] = (best[0], haversine_m(p.lat, p.lon, best[1], best[2]))
     return result
@@ -125,7 +102,7 @@ def _k_nearest(pois: list[POI], k: int) -> dict[NodeId, list[NodeId]]:
 
 
 def _edge_points(osm_graph, a, b, data: dict) -> list[LatLon]:
-    """Polyline (lat, lon) của một cạnh OSM a->b, đúng chiều a->b."""
+    """Polyline (lat, lon) của cạnh OSM a->b, đảo chiều nếu geometry lưu ngược."""
     na, nb = osm_graph.nodes[a], osm_graph.nodes[b]
     geom = data.get("geometry")
     if geom is None or not hasattr(geom, "coords"):
@@ -139,14 +116,13 @@ def _edge_points(osm_graph, a, b, data: dict) -> list[LatLon]:
 def _make_segment(
     osm_graph, path: list, u: POI, v: POI, snap_u: float, snap_v: float
 ) -> RoadSegment:
-    """Ghép các cạnh OSM trên path thành một RoadSegment u->v."""
     points: list[LatLon] = [(u.lat, u.lon)]
     road_len: Counter[str] = Counter()
     name_len: Counter[str] = Counter()
     lanes_len: Counter[int] = Counter()
     total = 0.0
     for a, b in zip(path, path[1:], strict=False):
-        # MultiDiGraph có thể có nhiều cạnh song song: lấy cạnh ngắn nhất
+        # MultiDiGraph có thể có cạnh song song: lấy cạnh ngắn nhất
         data = min(osm_graph[a][b].values(), key=lambda d: float(d.get("length", math.inf)))
         pts = _edge_points(osm_graph, a, b, data)
         length = float(data.get("length", 0.0)) or sum(
@@ -166,7 +142,7 @@ def _make_segment(
 
     length_m = total + snap_u + snap_v
     straight = haversine_m(u.lat, u.lon, v.lat, v.lon)
-    if length_m < straight:  # về lý thuyết không xảy ra, giữ để an toàn cho admissibility
+    if length_m < straight:  # giữ length_m >= haversine (điều kiện admissibility)
         log.warning("Cạnh %s->%s ngắn hơn haversine, nâng lên %.1f m", u.id, v.id, straight)
         length_m = straight
     return RoadSegment(
@@ -183,7 +159,6 @@ def _make_segment(
 
 
 def _scc_outside_largest(node_ids: list[NodeId], edges: dict[str, RoadSegment]) -> set[NodeId]:
-    """Các node không thuộc thành phần liên thông mạnh lớn nhất."""
     import networkx as nx
 
     g = nx.DiGraph()
@@ -196,7 +171,6 @@ def _scc_outside_largest(node_ids: list[NodeId], edges: dict[str, RoadSegment]) 
 def build_graph_with_report(
     pois: list[POI], osm_graph, k: int = 4, max_extra_k: int = 4
 ) -> tuple[Graph, BuildReport]:
-    """Như build_graph nhưng trả thêm BuildReport (số cạnh bị lọc, các lần sửa liên thông...)."""
     import networkx as nx
 
     if k < 1:
@@ -206,8 +180,7 @@ def build_graph_with_report(
         raise ValueError("Trùng id POI")
     report = BuildReport(k=k)
 
-    # Chỉ snap vào thành phần liên thông mạnh lớn nhất của mạng OSM: node ngoài thành phần này
-    # (đường cụt một chiều, đường bị cắt ở biên vùng tải) không thể nối hai chiều với POI khác.
+    # Node ngoài thành phần liên thông mạnh lớn nhất không nối được hai chiều với POI khác
     main_component = max(nx.strongly_connected_components(osm_graph), key=len)
     nearest = snap_pois(pois, osm_graph)
     snap = snap_pois(pois, osm_graph, main_component)
@@ -267,7 +240,6 @@ def build_graph_with_report(
     add_pairs(all_pairs, edges)
 
     node_ids = list(by_id)
-    # Sửa liên thông bước 1: tăng k cho các node nằm ngoài thành phần lớn nhất
     for extra in range(2, max_extra_k + 1, 2):
         outside = _scc_outside_largest(node_ids, edges)
         if not outside:
@@ -279,7 +251,6 @@ def build_graph_with_report(
             f"+{len(edges) - before} cạnh"
         )
 
-    # Bước 2: thêm lại cạnh đã bị lọc "xuyên POI" có dính tới node lẻ
     outside = _scc_outside_largest(node_ids, edges)
     if outside:
         readded = [
@@ -304,5 +275,4 @@ def build_graph_with_report(
 
 
 def build_graph(pois: list[POI], osm_graph, k: int = 4) -> Graph:
-    """Tạo Graph nối mỗi POI với k POI gần nhất."""
     return build_graph_with_report(pois, osm_graph, k)[0]
