@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+# kết quả chạy: chỉ commit bản cuối khi cần
+results/logs/*
+!results/logs/.gitkeep
+HW3_*.zip
